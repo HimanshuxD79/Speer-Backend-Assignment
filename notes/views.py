@@ -10,15 +10,18 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from .models import Note
 from users.models import CustomUser
 from django.db.models import Q
+from drf_spectacular.utils import extend_schema
 # Create your views here.
 
 class NoteListCreateView(generics.ListCreateAPIView):
     serializer_class = NoteSerializer
     permission_classes = [IsAuthenticated]
     authentication_classes=[JWTAuthentication]
+    @extend_schema(responses=NoteSerializer)
     def get_queryset(self):
         user = self.request.user
         return Note.objects.filter(Q(user=user) | Q(shared_with=user)).distinct()
+    @extend_schema(responses=NoteSerializer)    
     def perform_create(self,serializer):
         serializer.save(user=self.request.user)
 
@@ -26,6 +29,7 @@ class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = NoteSerializer
     permission_classes = [permissions.IsAuthenticated]
     authentication_classes=[JWTAuthentication]
+    @extend_schema(responses=NoteSerializer)
     def get_queryset(self):
         user = self.request.user
         return Note.objects.filter(Q(user=user) | Q(shared_with=user)).distinct()
@@ -33,6 +37,7 @@ class NoteDetailView(generics.RetrieveUpdateDestroyAPIView):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([JWTAuthentication])
+@extend_schema(responses=NoteSerializer)
 def share_note(request, id):
     note = Note.objects.filter(id=id, user=request.user).first()
     if not note:
@@ -60,11 +65,14 @@ def share_note(request, id):
     serializer = NoteSerializer(note)
     return Response(serializer.data)     
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 @authentication_classes([JWTAuthentication])
+@extend_schema(responses=NoteSerializer)
 def search_notes(request):
     query = request.query_params.get('q','')
     notes = Note.objects.filter(user=request.user,title__icontains=query)
     serializer = NoteSerializer(notes,many=True)
     return Response(serializer.data)
+   
